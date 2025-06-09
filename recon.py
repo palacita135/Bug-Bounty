@@ -67,6 +67,21 @@ def recon_phase(domain, outdir):
     run(f"gobuster dir -u https://{domain} -w /usr/share/wordlists/dirb/common.txt -q", os.path.join(recon_dir, "gobuster.txt"), "Gobuster Dir")
     run(f"ffuf -u https://{domain}/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -t 40", os.path.join(recon_dir, "ffuf.txt"), "FFUF Fuzz")
 
+# === PORT SCAN & FINGERPRINTING ===
+def port_scan_phase(domain, outdir):
+    scan_dir = os.path.join(outdir, "SCAN")
+    os.makedirs(scan_dir, exist_ok=True)
+    run(f"nmap -sV -A -T4 {domain}", os.path.join(scan_dir, "nmap.txt"), "Nmap Full Scan")
+    run(f"masscan {domain} -p1-65535 --rate=1000", os.path.join(scan_dir, "masscan.txt"), "Masscan All Ports")
+    run(f"wafw00f https://{domain}", os.path.join(scan_dir, "wafw00f.txt"), "WAF Detection")
+
+# === SCREENSHOT PHASE ===
+def screenshot_phase(domain, outdir):
+    screen_dir = os.path.join(outdir, "SCREENSHOTS")
+    os.makedirs(screen_dir, exist_ok=True)
+    run(f"eyewitness --web -f {outdir}/RECON/httpx.txt -d {screen_dir} --no-prompt", os.path.join(screen_dir, "eyewitness.log"), "EyeWitness Screenshots")
+    run(f"cat {outdir}/RECON/httpx.txt | aquatone -out {screen_dir}", os.path.join(screen_dir, "aquatone.log"), "Aquatone Screenshots")
+
 # === MAIN ===
 def main():
     banner()
@@ -76,6 +91,8 @@ def main():
     os.makedirs(outdir, exist_ok=True)
 
     recon_phase(target, outdir)
+    port_scan_phase(target, outdir)
+    screenshot_phase(target, outdir)
 
 if __name__ == "__main__":
     main()
