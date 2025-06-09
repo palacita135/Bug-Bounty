@@ -1,4 +1,4 @@
-# Kali GPT - DirtyHeroes Recon Toolkit (Ultimate Edition)
+# DirtyHeroes Recon Toolkit (Ultimate Edition)
 # Author: Dirty Heroes 😈
 
 import os
